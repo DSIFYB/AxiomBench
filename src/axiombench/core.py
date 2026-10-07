@@ -24,6 +24,8 @@ def digest(path):
 def load_tasks(path):
     tasks = []
     seen = set()
+    fixtures = {}
+    suite_root = Path(path).resolve().parent
     content = gzip.decompress(Path(path).read_bytes()).decode("utf-8") if str(path).endswith('.gz') else Path(path).read_text(encoding="utf-8")
     for line_no, line in enumerate(content.splitlines(), 1):
         if not line.strip():
@@ -49,11 +51,28 @@ def load_tasks(path):
             if not isinstance(task[key], str) or not task[key].strip():
                 raise ValueError(f"{task['id']}: invalid {key}")
         if task["kind"] == "cpp":
+            cpu_limit=task.get('cpu_time_limit_seconds',10)
+            if type(cpu_limit) is not int or not 1<=cpu_limit<=10:
+                raise ValueError(f"{task['id']}: invalid CPU limit")
             if task.get("mode") not in {"generation", "repair"}:
                 raise ValueError(f"{task['id']}: invalid C++ mode")
             if task["mode"] == "repair" and not task.get("buggy_code"):
                 raise ValueError(f"{task['id']}: repair needs buggy_code")
             tests = task.get("tests", [])
+            for case in tests:
+                for key in ('stdin','stdout'):
+                    reference=case.get(key+'_fixture')
+                    if reference is None:continue
+                    fixture=(suite_root/reference['path']).resolve()
+                    if not fixture.is_relative_to(suite_root/'fixtures'):
+                        raise ValueError(f"{task['id']}: fixture outside fixture directory")
+                    cache_key=(str(fixture),reference['sha256'])
+                    if cache_key not in fixtures:
+                        raw=fixture.read_bytes()
+                        if hashlib.sha256(raw).hexdigest()!=reference['sha256']:
+                            raise ValueError(f"{task['id']}: fixture checksum mismatch")
+                        fixtures[cache_key]=gzip.decompress(raw).decode('utf-8')
+                    case[key]=fixtures[cache_key]
             if not tests or any(not isinstance(t.get(k), str) for t in tests for k in ("stdin", "stdout")):
                 raise ValueError(f"{task['id']}: invalid tests")
         elif "answer" not in task:
@@ -182,10 +201,11 @@ def score_cpp(task, response, image):
         if created.returncode:
             raise RuntimeError('Docker volume creation failed')
         def command(name, compile_mode=False):
+            cpu_limit=10 if compile_mode else task.get('cpu_time_limit_seconds',10)
             base = ["docker", "run", "--name", name, "--network=none",
                     "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges",
                     "--memory=512m", "--memory-swap=512m", "--cpus=1", "--pids-limit=64",
-                    "--ulimit=cpu=10:10", "--ulimit=fsize=16777216:16777216", "--ulimit=nofile=64:64",
+                    f"--ulimit=cpu={cpu_limit}:{cpu_limit}", "--ulimit=fsize=16777216:16777216", "--ulimit=nofile=64:64",
                     "--tmpfs=/tmp:rw,exec,nosuid,size=64m,mode=1777"]
             if compile_mode:
                 return base + ['--mount', f'type=bind,src={path},dst=/src,readonly',

@@ -35,3 +35,9 @@
 ## Extended v0.2
 
 Файл `tasks.jsonl.gz` содержит тот же UTF-8 JSONL, сжатый gzip. Поля family и variant обозначают базовое семейство и параметрический вариант; mode отделяет C++ generation и repair. Quick выбирает первую задачу каждой family/mode группы; Full сохраняет все. Поле verification_method описывает авторский проверочный метод и не передаётся модели. Manifest закрепляет compressed bytes и эталоны. Статистическая зависимость вариантов сохраняется независимо от наличия 900 уникальных prompt strings.
+
+## Quality v0.3
+
+Новые ID имеют префикс `v03-`. Поле `repair_type`: `semantic` или `syntax` для C++ repair. `cpu_time_limit_seconds`: целое 1…10, по умолчанию 10 для прежних наборов, в v0.3 — 1. `case_type: stress` отмечает большой случай.
+
+Вместо inline `stdin`/`stdout` большой случай может содержать `stdin_fixture`/`stdout_fixture`: объект `{"path":"fixtures/<hash>.txt.gz","sha256":"..."}`. Hash относится к compressed bytes. Путь разрешён только внутри каталога fixtures рядом с tasks-файлом. `load_tasks` проверяет hash и распаковывает строку до grading. Main dataset hash закрепляет эти ссылки с hashes; менять файл fixture без изменения его hash запрещено. Prompt export не включает fixture paths, hashes или проверочные данные. Для переноса набора нужны весь каталог набора и его fixtures, не только `tasks.jsonl.gz`.

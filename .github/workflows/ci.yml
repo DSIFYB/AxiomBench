@@ -17,10 +17,13 @@ jobs:
       - run: python tools/verify_references.py
       - run: python tools/verify_math.py
       - run: python tools/verify_extended.py --jobs 2
+      - run: python tools/verify_quality_text.py
+      - run: python tools/verify_quality_cpp.py --jobs 2
       - name: Rebuild original dataset reproducibly
         run: |
           python tools/build_starter.py
           python tools/build_extended.py
+          python tools/build_quality.py
           git diff --exit-code -- benchmarks
   docker-judge:
     # Execute only the trusted reference fixture; never consume untrusted PR output files.
@@ -45,3 +48,18 @@ jobs:
           PY
           axiombench --suite fixture-suite.jsonl --track cpp grade --predictions fixture.jsonl --output fixture-report.json
           python -c "import json; assert json.load(open('fixture-report.json'))['summary']['cpp']['passed'] == 1"
+      - name: Grade syntax repair and reject the original compilation error
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from axiombench.core import load_tasks
+          task = next(t for t in load_tasks('benchmarks/quality-v0.3/tasks.jsonl.gz') if t.get('repair_type') == 'syntax')
+          source = (Path('benchmarks/quality-v0.3') / task['reference']).read_text()
+          Path('syntax-suite.jsonl').write_text(json.dumps(task) + '\n')
+          for name, code in [('syntax-fixed', source), ('syntax-bad', task['buggy_code'])]:
+              Path(name + '.jsonl').write_text(json.dumps({'id': task['id'], 'response': '```cpp\n' + code + '\n```'}) + '\n')
+          PY
+          axiombench --suite syntax-suite.jsonl --track cpp grade --predictions syntax-fixed.jsonl --output syntax-fixed-report.json
+          axiombench --suite syntax-suite.jsonl --track cpp grade --predictions syntax-bad.jsonl --output syntax-bad-report.json
+          python -c "import json; assert json.load(open('syntax-fixed-report.json'))['tasks'][0]['passed']; assert json.load(open('syntax-bad-report.json'))['tasks'][0]['status'] == 'compile_error'"

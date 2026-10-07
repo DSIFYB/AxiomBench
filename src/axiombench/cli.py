@@ -150,7 +150,7 @@ def grade(tasks, args):
                 score = score_text(task, row["response"])
         rows.append({"id": task["id"], "track": task["track"], "category": task["category"],
                      "difficulty": task["difficulty"], "family":task.get('family',task['id']),
-                     "mode": task.get("mode"), **score})
+                     "mode": task.get("mode"), "repair_type":task.get('repair_type'), **score})
         if task['kind']=='cpp':print(f'Grading [{index}/{len(tasks)}] {task["id"]}: {score["status"]}',flush=True)
     report = {"axiombench_version": __version__, "suite_sha256": digest(args.suite),
               "predictions_sha256": digest(args.predictions), "track": args.track, 'profile':args.profile,
@@ -159,6 +159,8 @@ def grade(tasks, args):
               "summary": aggregate(rows), "overall": overall_score(rows),
               "cpp_modes": {mode: aggregate([r for r in rows if r.get("mode") == mode])["cpp"]
                             for mode in ("generation", "repair")},
+              "cpp_repair_types": {kind: aggregate([r for r in rows if r.get('mode')=='repair' and r.get('repair_type')==kind])['cpp']
+                                   for kind in ('semantic','syntax')},
               "tasks": rows}
     dump(args.output, report)
     html_path=str(Path(args.output).with_suffix('.html'))
@@ -171,7 +173,7 @@ def grade(tasks, args):
 
 def main():
     parser = argparse.ArgumentParser(prog="axiombench")
-    parser.add_argument("--suite", default="benchmarks/extended-v0.2/tasks.jsonl.gz")
+    parser.add_argument("--suite", default="benchmarks/quality-v0.3/tasks.jsonl.gz")
     parser.add_argument("--track", choices=["all", "general", "cpp", "math"], default="all")
     parser.add_argument('--profile',choices=['quick','full'],default='quick')
     commands = parser.add_subparsers(dest="command", required=True)

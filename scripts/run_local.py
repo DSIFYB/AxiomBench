@@ -19,6 +19,7 @@ def main():
     parser=argparse.ArgumentParser()
     parser.add_argument('--base-url',default='http://127.0.0.1:1234/v1')
     parser.add_argument('--model')
+    parser.add_argument('--suite',default=str(ROOT/'benchmarks/quality-v0.3/tasks.jsonl.gz'))
     parser.add_argument('--profile',choices=['quick','full'],default='quick')
     parser.add_argument('--track',choices=['all','general','math','cpp'],default='all')
     parser.add_argument('--max-tokens',type=int,default=4096)
@@ -39,7 +40,7 @@ def main():
         return 1
     stamp=datetime.datetime.now().strftime('%Y%m%d-%H%M%S-%f')
     answers=Path(args.answers).resolve() if args.answers else ROOT/'results'/f'{stamp}-{args.profile}-{args.track}.jsonl'
-    common=['--suite',str(ROOT/'benchmarks/extended-v0.2/tasks.jsonl.gz'),'--profile',args.profile,'--track',args.track]
+    common=['--suite',args.suite,'--profile',args.profile,'--track',args.track]
     run_args=[*common,'run','--base-url',args.base_url,'--model',args.model,'--max-tokens',str(args.max_tokens),'--output',str(answers)]
     if args.resume:run_args+=['--resume']
     result=call(run_args)
