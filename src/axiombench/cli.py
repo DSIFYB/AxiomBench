@@ -13,7 +13,7 @@ import urllib.request
 from pathlib import Path
 
 from . import __version__
-from .core import (aggregate, digest, docker_image_id, load_tasks, prompt_for,
+from .core import (aggregate, digest, docker_image_id, load_tasks, overall_score, prompt_for,
                    score_cpp, score_text, select_tasks)
 from .report import write_html
 
@@ -156,7 +156,7 @@ def grade(tasks, args):
               "predictions_sha256": digest(args.predictions), "track": args.track, 'profile':args.profile,
               "run_metadata": metadata, "docker_image_id": image,
               "note": "Development set. Not an official external benchmark score or an IQ measurement.",
-              "summary": aggregate(rows),
+              "summary": aggregate(rows), "overall": overall_score(rows),
               "cpp_modes": {mode: aggregate([r for r in rows if r.get("mode") == mode])["cpp"]
                             for mode in ("generation", "repair")},
               "tasks": rows}
@@ -164,6 +164,7 @@ def grade(tasks, args):
     html_path=str(Path(args.output).with_suffix('.html'))
     write_html(html_path,report)
     print('HTML report: '+html_path)
+    print('Overall score: '+json.dumps(report['overall'], ensure_ascii=False))
     print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
     return 2 if any(r["status"] in {"api_error", "missing"} for r in rows) else 0
 

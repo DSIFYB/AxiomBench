@@ -94,6 +94,19 @@ class CliTests(unittest.TestCase):
             self.assertEqual(data["cpp_modes"]["generation"]["total"], 4)
             self.assertEqual(data["cpp_modes"]["repair"]["total"], 4)
 
+    def test_overall_score_saved_in_json_and_html(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            predictions = Path(tmp) / 'empty.jsonl'
+            predictions.write_text('')
+            report = Path(tmp) / 'all.json'
+            self.assertEqual(self.invoke(['grade', '--predictions', str(predictions), '--output', str(report)]), 2)
+            data = json.loads(report.read_text())
+            self.assertEqual(data['overall']['score'], 0)
+            self.assertEqual(data['overall']['status'], 'provisional')
+            self.assertFalse(data['overall']['comparable'])
+            self.assertIn('0 / 100', report.with_suffix('.html').read_text())
+            self.assertIn('Предварительный результат', report.with_suffix('.html').read_text())
+
 
 if __name__ == "__main__":
     unittest.main()

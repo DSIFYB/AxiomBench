@@ -255,5 +255,27 @@ def aggregate(rows):
                          'family_macro_accuracy_percent':round(100*sum(family_rates)/len(family_rates),2) if family_rates else None,
                          'confidence_note':'Dependent family variants; IID Wilson interval suppressed' if clustered else 'IID assumption; public development set',
                          "statuses": dict(Counter(r["status"] for r in group))}
-    # No artificial overall IQ score: report separate dimensions.
     return result
+
+
+def overall_score(rows):
+    """Equal weight for four dimensions; never renormalize a partial track run."""
+    groups = {
+        'general': [r for r in rows if r['track'] == 'general'],
+        'math': [r for r in rows if r['track'] == 'math'],
+        **{f'cpp_{mode}': [r for r in rows if r['track'] == 'cpp' and r.get('mode') == mode]
+           for mode in ('generation', 'repair')},
+    }
+    absent = [key for key, group in groups.items() if not group]
+    incomplete = sum(r['status'] in {'missing', 'api_error'} for r in rows)
+    value = None if absent else 25 * sum(
+        (Fraction(sum(r['passed'] for r in group), len(group)) for group in groups.values()),
+        Fraction(0))
+    return {
+        'protocol': 'equal-four-v1', 'weights': {key: 0.25 for key in groups},
+        'score': round(float(value), 2) if value is not None else None,
+        'display_score': math.floor(value + Fraction(1, 2)) if value is not None else None,
+        'maximum': 100, 'missing_dimensions': absent, 'incomplete_tasks': incomplete,
+        'status': 'unavailable' if absent else ('provisional' if incomplete else 'complete'),
+        'comparable': not absent and not incomplete,
+    }
