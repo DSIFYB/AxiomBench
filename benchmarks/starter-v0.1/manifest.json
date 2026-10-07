@@ -1,0 +1,26 @@
+{
+  "name": "AxiomBench Starter",
+  "version": "0.1",
+  "status": "public-development-only",
+  "created_at": "2026-10-07",
+  "license": "MIT",
+  "source": "original AxiomBench development tasks",
+  "counts": {
+    "general": 12,
+    "cpp_generation": 4,
+    "cpp_repair": 4,
+    "math": 12,
+    "cpp_test_cases": 34
+  },
+  "files": {
+    "references/cpp-001.cpp": "e5f2b87f2dbbedb2eb58d5ae0cd1ff260495403afe1e54552bc6f3766e051a7c",
+    "references/cpp-002.cpp": "89a8fd1de7b6004cc186812d3ebc20c7c6dabdc80b044920f73a33f4a64d99b6",
+    "references/cpp-003.cpp": "dac9e738538dfd7884f8d5c183cd22efe5f3243caf4788c92f627a20255d2ffa",
+    "references/cpp-004.cpp": "6029bc11d57f86ef3fe8bea043b2427925c45aa80bc405437d03e9d26efa05fe",
+    "references/cpp-005.cpp": "e5f2b87f2dbbedb2eb58d5ae0cd1ff260495403afe1e54552bc6f3766e051a7c",
+    "references/cpp-006.cpp": "f8be0dbbbb3c8f7a124161cec01be52b25c33086630becf5c98c7a2c73fee55a",
+    "references/cpp-007.cpp": "ad357ba2dc5493c0d5da30e432efa193dd4a39dc951c22678ef6e9e8952a23b1",
+    "references/cpp-008.cpp": "ef0d1e09ab8359ab88d3b3931a78bb655035f59c373b562dfc1e3786a0e823a5",
+    "tasks.jsonl": "9cd52e49a639a757b132e1b4f209539728e810cc1deacf2860d01b97bf1008eb"
+  }
+}

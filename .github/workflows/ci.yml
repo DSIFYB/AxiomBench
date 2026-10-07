@@ -1,0 +1,47 @@
+name: Validate AxiomBench
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e .
+      - run: axiombench --profile full validate
+      - run: python -m unittest discover -s tests -v
+      - run: python tools/verify_references.py
+      - run: python tools/verify_math.py
+      - run: python tools/verify_extended.py --jobs 2
+      - name: Rebuild original dataset reproducibly
+        run: |
+          python tools/build_starter.py
+          python tools/build_extended.py
+          git diff --exit-code -- benchmarks
+  docker-judge:
+    # Execute only the trusted reference fixture; never consume untrusted PR output files.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - run: python -m pip install -e .
+      - run: docker pull gcc:14
+      - name: Create one trusted reference prediction
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path('benchmarks/starter-v0.1/references/cpp-001.cpp')
+          Path('fixture.jsonl').write_text(json.dumps({'id': 'cpp-001', 'response': '```cpp\n' + p.read_text() + '\n```'}) + '\n')
+          from axiombench.core import load_tasks
+          task = next(t for t in load_tasks('benchmarks/starter-v0.1/tasks.jsonl') if t['id'] == 'cpp-001')
+          Path('fixture-suite.jsonl').write_text(json.dumps(task) + '\n')
+          PY
+          axiombench --suite fixture-suite.jsonl --track cpp grade --predictions fixture.jsonl --output fixture-report.json
+          python -c "import json; assert json.load(open('fixture-report.json'))['summary']['cpp']['passed'] == 1"
